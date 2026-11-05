@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>馬祖南竿・北竿公車路線查詢</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚌</text></svg>" />
+  <link rel="stylesheet" href="styles.css?v=20261105d" />
+</head>
+<body>
+  <!-- 簡潔頂部列 -->
+  <header class="top-header">
+    <div class="header-inner">
+      <div class="brand-title">
+        <h1 id="app-main-title">🚌 南竿公車動態路線查詢</h1>
+      </div>
+      <div class="header-actions">
+        <a href="https://www.matsuebus.tw/" target="_blank" rel="noopener noreferrer" class="btn-header">🚌 馬祖公車</a>
+        <a id="header-timetable-link" href="timetable.png" target="_blank" rel="noopener noreferrer" class="btn-header">📄 南竿時刻表</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- 主要查詢卡片 -->
+    <section class="planner-control-card" aria-label="路線查詢">
+      <div class="island-bar">
+        <div class="island-switch" role="group" aria-label="島嶼切換">
+          <button type="button" id="island-nangan-btn" class="island-btn active" data-island="nangan">🏝️ 南竿公車</button>
+          <button type="button" id="island-beigan-btn" class="island-btn" data-island="beigan">🏝️ 北竿公車</button>
+        </div>
+
+        <div id="day-type-bar" class="day-type-switch" role="group" aria-label="北竿平日與放假日班表切換" hidden>
+          <button type="button" id="daytype-weekday-btn" class="daytype-btn active" data-daytype="weekday">📅 平日班表</button>
+          <button type="button" id="daytype-holiday-btn" class="daytype-btn" data-daytype="holiday">🏖️ 學生放假日班表</button>
+        </div>
+      </div>
+
+      <div class="control-grid">
+        <div class="form-group">
+          <label for="from-stop">起點</label>
+          <select id="from-stop" class="select-input"></select>
+        </div>
+
+        <button type="button" id="swap-stops-btn" class="swap-btn" title="起訖站互換">⇄</button>
+
+        <div class="form-group">
+          <label for="to-stop">終點</label>
+          <select id="to-stop" class="select-input"></select>
+        </div>
+
+        <div class="form-group">
+          <label>班次顯示</label>
+          <div class="time-scope-switch" role="group" aria-label="班次時段切換">
+            <button type="button" id="scope-upcoming-btn" class="scope-btn active">尚未發車</button>
+            <button type="button" id="scope-allday-btn" class="scope-btn">整天</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-controls-bar">
+        <div class="filter-toggles">
+          <label class="checkbox-label">
+            <input type="checkbox" id="filter-transfer" checked />
+            <span>含轉乘方案</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="filter-accessible" />
+            <span>♿ 無障礙</span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 主內容區：左側路網圖 + 右側重點班次卡片 -->
+    <div class="workspace-grid">
+      <aside id="network-map-card" class="map-sticky-card" aria-label="路網圖">
+        <div class="map-toolbar">
+          <span class="map-hint">點擊站點設為：</span>
+          <div class="map-mode-switch">
+            <button type="button" id="map-mode-from" class="mode-btn">起點</button>
+            <button type="button" id="map-mode-to" class="mode-btn active">終點</button>
+          </div>
+        </div>
+        <div class="svg-wrapper">
+          <div class="map-overlay-actions" role="group" aria-label="地圖工具">
+            <button type="button" id="map-sim-btn" class="map-overlay-btn" title="切換公車動畫">▶ 公車動畫</button>
+            <button type="button" id="map-fullscreen-btn" class="map-overlay-btn map-fullscreen-btn" title="切換地圖全螢幕">⛶ 全螢幕</button>
+          </div>
+          <svg id="network-map-svg" viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+        <div id="sim-control-bar" class="sim-control-bar" hidden>
+          <div class="sim-bar-top">
+            <div class="sim-clock-group">
+              <span id="sim-live-dot" class="sim-live-dot paused"></span>
+              <span class="sim-clock-label">模擬時間</span>
+              <strong id="sim-clock-text" class="sim-clock-time">00:00:00</strong>
+              <span id="sim-active-count" class="sim-count-pill">行駛中 0 輛</span>
+            </div>
+            <div class="sim-btn-group">
+              <button type="button" id="sim-play-btn" class="sim-mini-btn">▶ 播放</button>
+              <button type="button" id="sim-now-btn" class="sim-mini-btn" title="重設為現在系統時間">🕒 現在時間</button>
+              <button type="button" id="sim-speed-50x" class="sim-mini-btn" data-speed="50">50X</button>
+              <button type="button" id="sim-speed-100x" class="sim-mini-btn active" data-speed="100">100X</button>
+              <button type="button" id="sim-speed-200x" class="sim-mini-btn" data-speed="200">200X</button>
+            </div>
+          </div>
+          <div class="sim-slider-row">
+            <span id="sim-edge-min" class="sim-edge-time">06:20</span>
+            <input type="range" id="sim-time-slider" min="380" max="1145" step="0.1" value="380" />
+            <span id="sim-edge-max" class="sim-edge-time">19:05</span>
+          </div>
+        </div>
+      </aside>
+
+      <section aria-label="推薦班次">
+        <div id="route-summary-banner"></div>
+        <div id="route-results" class="route-results-list"></div>
+      </section>
+    </div>
+
+    <!-- 次要資訊預設收合 -->
+    <details class="section-collapse">
+      <summary class="collapse-summary">📅 展開完整雙向時刻表與支線圖例</summary>
+      <div class="collapse-body">
+        <div id="branch-legend-grid" class="legend-grid" style="margin-bottom: 18px;"></div>
+
+        <div class="tt-filter-bar">
+          <select id="tt-filter-line" class="select-input" style="width:auto; padding:6px 10px;">
+            <option value="all">全部線別</option>
+            <option value="山">山線</option>
+            <option value="海">海線</option>
+          </select>
+
+          <select id="tt-filter-branch" class="select-input" style="width:auto; padding:6px 10px;">
+            <option value="all">全部支線</option>
+            <option value="red">🔴 機場</option>
+            <option value="white">⚪ 復興村</option>
+            <option value="green">🟢 仁愛</option>
+            <option value="orange">🟠 遊客中心</option>
+            <option value="blue">🔵 津沙</option>
+            <option value="grey">🔘 志清發電廠</option>
+            <option value="yellow">🟡 四維</option>
+            <option value="black">⚫ 梅石中轉</option>
+          </select>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="tt-filter-accessible" />
+            <span>♿ 無障礙</span>
+          </label>
+        </div>
+
+        <div class="tt-dual-grid">
+          <div>
+            <div id="tt-left-col-title" class="tt-column-title">介壽站發車 ➔ 馬港站</div>
+            <table class="tt-table">
+              <thead>
+                <tr>
+                  <th>線別</th>
+                  <th>發車</th>
+                  <th>支線</th>
+                  <th>備註</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="timetable-left-body"></tbody>
+            </table>
+          </div>
+
+          <div>
+            <div id="tt-right-col-title" class="tt-column-title">馬港站發車 ➔ 介壽站</div>
+            <table class="tt-table">
+              <thead>
+                <tr>
+                  <th>線別</th>
+                  <th>發車</th>
+                  <th>支線</th>
+                  <th>備註</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="timetable-right-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <ul id="official-rules-list" class="rules-list" style="margin-top: 16px;"></ul>
+      </div>
+    </details>
+  </main>
+
+  <!-- 彈窗：單一班次停靠站 -->
+  <div id="run-detail-modal" class="modal-backdrop" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <strong id="run-modal-title">班次路線</strong>
+        <button type="button" id="close-run-modal-btn" class="modal-close-btn">✕</button>
+      </div>
+      <div id="run-modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="data.js?v=20261105d"></script>
+  <script src="planner.js?v=20261105d"></script>
+  <script src="app.js?v=20261105d"></script>
+</body>
+</html>
